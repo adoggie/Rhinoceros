@@ -1,0 +1,191 @@
+
+app_name: 'aggregator'
+project_name: 'aggregator_server'
+project_version: '0.1'
+
+logging:
+  level: DEBUG
+  format: '%(levelname)s %(asctime)s  %(message)s'
+  message_format: '%(project_name)s:%(project_version)s %(app_id)s %(_filename)s:%(_lineno)d [%(tags)s] '
+
+  filters:
+    trans:
+      tag: 'TRANS:'   # tag 过滤
+  handlers:
+    - type: file
+      enable: true
+      filename: 'server.log'
+      encoding: 'UTF-8'
+      max_bytes: 67108864 # 64MB
+      backup_count: 10
+
+    - type: file
+      enable: true
+      filename: 'trans.log'   #运单日志跟踪
+      encoding: 'UTF-8'
+      max_bytes: 67108864 # 64MB
+      backup_count: 10
+      filter: 'trans'
+
+    - type: logtail
+      enable: false
+      logstore: 'abc'
+      access_token: 'xxxx'
+      scret_key: 'xxxx'
+      uri: 'xxxx'
+
+    - type: console
+      enable: false
+
+http_trace: #自动日志记录
+  level: DEBUG
+  request:
+    options:
+      header:  false
+      body:  true
+      max_size: 500 # 最大数据包长度
+    urls:
+      - match: '/'
+      - match: 'zoo/cat'
+        body:  true
+
+  response:
+    options:
+      header:  false
+      body:  true
+      max_size: 500 # 最大数据包长度
+    urls:
+      - match: '/'
+      - match: 'zoo/cat'
+        body:  true
+
+celery_trace: # celery 调用日志记录
+  level: 'DEBUG'
+  client_max_size: 500 # 0 :不记录数据参数
+  server_max_size: 500 # 日志记录 最大数据包长度
+
+
+celery_config:
+  services:
+    - name: 'test_server'
+      route:
+        type: 'redis'
+        broker: 'redis://127.0.0.1:6379/6'       #request queue
+        backend: 'redis://127.0.0.1:6379/7'
+      exchange:
+        name: 'tasks'
+        type: 'direct' # topic,fanout,headers,direct
+      queues:
+        - name: 'sub_dash'
+          routing_key: 'sub_dash'
+      tasks:
+        - name: 'hello'
+          path: 'access.celery.hello'
+          queue: 'sub_dash'
+          routing_key: 'sub_dash'
+      default_queue:  'default'
+
+  current: 'test_server' # 当前可用的celery服务
+
+http:
+  host : '127.0.0.1'
+  port : 15000
+  threaded: false
+  debug: true
+
+cache_config:
+  default:
+    type: redis
+    host: 'ytodev2'
+    port: 6379
+    password: '13916624477'
+    enable: true
+
+#mysql://username:password@hostname/database
+#sqlite:////absolute/path/to/database
+#postgresql://username:password@hostname/database
+
+flask_config:
+  active: default
+  default:
+    REDIS_URL : "redis://:@localhost:6379/1"
+    SQLALCHEMY_DATABASE_URI : 'sqlite:////tmp/test.db'
+#    SQLALCHEMY_BINDS:
+#      users:        'mysqldb://localhost/users'
+#      appmeta:      'sqlite:////path/to/appmeta.db'
+
+    SQLALCHEMY_TRACK_MODIFICATIONS : true
+    SQLALCHEMY_COMMIT_ON_TEARDOWN : true
+    SECRET_KEY : "abc"
+    TOKEN_EXPIRE : 3600*2
+    MAX_CONTENT_LENGTH : 5242880
+    UPLOAD_FOLDER : 'upload/'
+    FRONT_URL :  'tender_manage/'
+    DEBUG_TB_PROFILER_ENABLED : true
+    DEBUG : true
+
+  devel:
+
+blueprint_routes:
+  - package: 'access.api.v1'
+    url: '/rhino'
+    modules:
+      - name: 'auth'
+        url: '/auth'
+        routes:
+          - url: '/tickets'   # url name
+            name: 'getTickets'   # function name
+            methods: 'GET,POST'
+
+
+kafka_config:
+  - topic: 'test'
+    group: 'abcdef'  # simple_consumer if group is null
+#    hosts: '106.14.82.12:9092'
+#    zookeepers: 'wallizard.com:2181'
+    hosts: 'localhost:9092'
+    zookeepers: 'localhost:2181'
+    exec_thread_nr: 1 #执行线程数
+    entry:  'access.kafka.test.get_message' # last unit< get_message> is function object
+    enable: true
+    corutine: false # 是否启用协程
+    access: 'read,write' # 访问模式，用于发送 或接收
+
+amqp_config:
+  - name: 'mq_1'
+    type: 'qpid'
+    host: 'ytodev2'
+    port: 5672
+    address: "mq_1; {create: always, node: {type: queue,durable:true}}"
+#    address="mq_gwa_broadcast;{create:always,node:{type:topic,durable:true}}"
+    exec_thread_nr: 1 #执行线程数
+    entry:  'access.amqp.channel.data_entry' # last unit< get_message> is function object
+    enable: true
+
+zookeeper_config:
+  hosts: 'localhost:2181'
+  root: '/camel/carrier'
+
+inspection:
+  health_interval: 20
+
+user_service:
+  app_id: 'teresa'
+  secret_key: '57a6a0811829faf34a78ca625c383ec9'
+  users:
+    - name: 'admin'
+      vehicle:
+        - 'vehicles_g7.txt'
+        - 'vehicles_yl.txt'
+
+
+
+
+
+# qpid-receive -b localhost:5672 -a "mq_test;{create:always,node:{type:queue,durable:true}}"
+
+
+
+
+
+

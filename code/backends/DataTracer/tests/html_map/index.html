@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+
+
+    <!--http://cdn.code.baidu.com/-->
+    <!--http://lbsyun.baidu.com/jsdemo.htm#a1_2-->
+    <!--http://lbsyun.baidu.com/index.php?title=jspopular/guide/widget-->
+
+    <meta charset="UTF-8">
+
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+        body, html{width: 100%;height: 100%;overflow: hidden;margin:0;font-family:"微软雅黑";}
+        #allmap {width: 100%;height: 60%;overflow: hidden;margin:0;font-family:"微软雅黑";}
+    </style>
+
+    <title></title>
+    <script type="text/javascript" src="http://apps.bdimg.com/libs/jquery/2.1.4/jquery.js"></script>
+    <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=2lGY892LYZokThGF0Ie1FoXjIxaBFNi4"></script>
+
+
+</head>
+<body>
+<div id="allmap"></div>
+<div >
+    <button id="btn_clear_message" >清除</button>
+    <button id="btn_getvehiclesInView">查询可视地理区域车辆</button>
+    <button id="btn_getStatistics">车辆统计</button>
+	<button id="btn_getHotSpots">获取热区点</button>
+	<div>
+        <input id="search_text" type="text" id="name">
+        <button id="btn_filterVehicles">车牌查询</button>
+		<button id="btn_query_vehicles">查询指定车辆位置</button>
+		<button id="btn_query_track">查询车辆轨迹(近两小时)</button>
+
+    </div>
+
+	<br>
+	<div style="color: brown" id="short_message"></div>
+	<br>
+    <div style="color: green; overflow-scrolling: auto" id="message"></div>
+</div>
+</body>
+
+<script type="text/javascript">
+	var host = "http://127.0.0.1:15003";
+	var ticket="eyJzZWNyZXRfa2V5IjogIjU3YTZhMDgxMTgyOWZhZjM0YTc4Y2E2MjVjMzgzZWM5IiwgInVzZXJfaWQiOiAiYWRtaW4iLCAiYXBwX2lkIjogInRlcmVzYSIsICJ0aW1lIjogMTQ5MzgxNDc2MX0=";
+
+	function print_object(obj){
+		var str = JSON.stringify(obj, null, 4);
+		return str ;
+	}
+
+    var vehicles= new Object();
+
+
+	function addMarker(point){
+		var marker = new BMap.Marker(point);
+		map.addOverlay(marker);
+	}
+
+	function land_in_map(data){
+		map.clearOverlays();
+		for (var i =0; i< data.result.length; i++){
+			var obj = data.result[i];
+			var point = new BMap.Point(obj.lon ,obj.lat);
+			var marker = addMarker(point);
+			vehicles[obj.id] = {
+				data: obj,
+				marker: marker
+			};
+		}
+
+	}
+
+	function _land_in_map(data){
+		var points = [];  // 添加海量点数据
+		for (var i = 0; i < data.result.length; i++) {
+			points.push(new BMap.Point(data.result[i].lon, data.result[i].lat));
+		}
+		var options = {
+			size: BMAP_POINT_SIZE_SMALL,
+			shape: BMAP_POINT_SHAPE_STAR,
+			color: '#d340c3'
+		}
+		var pointCollection = new BMap.PointCollection(points, options);  // 初始化PointCollection
+//		pointCollection.addEventListener('click', function (e) {
+//			alert('单击点的坐标为：' + e.point.lng + ',' + e.point.lat);  // 监听点击事件
+//		});
+		map.addOverlay(pointCollection);  // 添加Overlay
+	}
+
+	function set_vehicle_position(obj){
+		var point = new BMap.Point(obj.lon ,obj.lat);
+		var id = obj.id;
+		if (vehicles.hasOwnProperty(id)){
+			var marker = vehicles[id].marker;
+			marker.setPosition(point);
+		}
+
+
+	}
+
+	function getHotSpots(){
+		var url = host+"/rhino/vehicles/hotspots";
+
+		var bs = map.getBounds();
+		var bssw = bs.getSouthWest();   //可视区域左下角
+		var bsne = bs.getNorthEast();   //可视区域右上角
+		var rect = [ bssw.lng ,bssw.lat ,bsne.lng-bssw.lng, bsne.lat-bssw.lat];
+		var scale = map.getZoom();
+		$.ajax({
+					url:url,
+					data:{
+						ticket:ticket,
+						rect:rect[0]+','+rect[1]+','+rect[2]+','+rect[3],
+						scale:scale,
+						limit:5000
+					},
+					success:function(data){
+						$('#short_message').text("objects:"+ data.result.length +" , "+ print_object(data));
+//						alert(print_object(data));
+//						land_in_map(data)
+					}
+				}
+		);
+	}
+
+    function load_all_vehilces(){
+        var url = host+"/rhino/vehicles/geometry";
+        $.ajax({
+                    url:url,
+                    data:{
+                        ticket:ticket,
+                        rect:"80,20,50,40",
+                        scale:10,
+                        limit:5000
+                    },
+			        success:function(data){
+						$('#message').text("objects:"+ data.result.length +" , "+ print_object(data));
+				        land_in_map(data)
+			        }
+                }
+        );
+    }
+
+	function filter_names(name){
+		var url = host+"/rhino/vehicles/names";
+		$.ajax({
+					url:url,
+					data:{
+						ticket:ticket,
+						name:$('#search_text').val(),
+						limit:50
+					},
+					success:function(data){
+						$('#short_message').text( print_object(data));
+//						$('#message').text( data.result[0]);
+//						alert( data );
+					}
+				}
+		);
+	}
+
+	function query_vehicles(){
+		var url = host+"/rhino/vehicles";
+		var timestamp = Date.parse(new Date())/1000;
+		$.ajax({
+					url:url,
+					data:{
+						ticket:ticket,
+						ids:$('#search_text').val(),
+
+					},
+					success:function(data){
+						$('#short_message').text( "objects:"+ data.result.length +" , "+print_object(data));
+					}
+				}
+		);
+	}
+
+	function query_track(){
+		var url = host+"/rhino/vehicles/track";
+		var timestamp = Date.parse(new Date())/1000;
+		$.ajax({
+					url:url,
+					data:{
+						ticket:ticket,
+						id:$('#search_text').val(),
+						start: timestamp - 3600*2,
+						end: timestamp,
+						granule: 1
+					},
+					success:function(data){
+						$('#short_message').text( "objects:"+ data.result.length +" , "+print_object(data));
+					}
+				}
+		);
+	}
+
+	function getStatistics(){
+		var url = host+"/rhino/vehicles/statistics";
+		$.ajax({
+					url:url,
+					data:{
+						ticket:ticket
+					},
+					success:function(data){
+						$('#short_message').text( print_object(data));
+					}
+				}
+		);
+	}
+
+	function onViewMapChanged(scale,rect){
+		var url = host+"/rhino/vehicles/geometry";
+		$.ajax({
+					url:url,
+					data:{
+						ticket:ticket,
+						rect: rect[0]+','+rect[1]+','+rect[2]+','+rect[3],
+						scale:scale,
+						limit:5000
+					},
+					success:function(data){
+//						$('#message').text( print_object(data));
+						$('#message').text("objects:"+ data.result.length +" , "+ print_object(data));
+
+						land_in_map(data)
+//						for (var i =0; i< data.result.length; i++) {
+//							var obj = data.result[i];
+//							set_vehicle_position(obj);
+//						}
+
+					}
+				}
+		);
+	}
+
+
+
+	$(document).ready(function(){
+        $('#btn_getvehiclesInView').click(function(){
+            updateCurrentView();
+        });
+
+        $('#btn_getStatistics').click(function(){
+	        getStatistics();
+        });
+
+	    $('#btn_filterVehicles').click(function(){
+		    filter_names();
+	    });
+		$('#btn_getHotSpots').click(function(){
+			getHotSpots();
+		});
+
+
+		$('#btn_query_vehicles').click(function(){
+			query_vehicles();
+		});
+
+		$('#btn_query_track').click(function(){
+			query_track();
+		});
+
+
+		$('#btn_clear_message').click(function(){
+			$('#short_message').text('');
+			$('#message').text('');
+
+		});
+
+
+	    load_all_vehilces();
+
+		window.setTimeout( update_timer, 5000);
+    });
+
+	function update_timer(){
+		updateCurrentView();
+		window.setTimeout(update_timer, 5000);
+	}
+
+	function updateCurrentView(){
+		var cp = map.getCenter();
+		var bs = map.getBounds();
+		var bssw = bs.getSouthWest();   //可视区域左下角
+		var bsne = bs.getNorthEast();   //可视区域右上角
+		var rect = [ bssw.lng ,bssw.lat ,bsne.lng-bssw.lng, bsne.lat-bssw.lat];
+		onViewMapChanged(map.getZoom(),rect)
+
+	}
+
+</script>
+<script type="text/javascript">
+    // 百度地图API功能
+    var map = new BMap.Map("allmap");    // 创建Map实例
+    map.centerAndZoom(new BMap.Point(116.404, 39.915), 11);  // 初始化地图,设置中心点坐标和地图级别
+    map.addControl(new BMap.MapTypeControl());   //添加地图类型控件
+    map.setCurrentCity("北京");          // 设置地图显示的城市 此项是必须设置的
+//    map.enableScrollWheelZoom(true);     //开启鼠标滚轮缩放
+    map.enableScrollWheelZoom(false);
+    map.addEventListener("zoomend", function(){
+        $('#message').html("地图缩放至：" + this.getZoom() + "级");
+	    updateCurrentView()
+    });
+
+    map.addEventListener("dragend", function(){
+	    updateCurrentView();
+    });
+
+    var mapType1 = new BMap.MapTypeControl({mapTypes: [BMAP_NORMAL_MAP,BMAP_HYBRID_MAP]});
+    var mapType2 = new BMap.MapTypeControl({anchor: BMAP_ANCHOR_TOP_LEFT});
+
+    var overView = new BMap.OverviewMapControl();
+    var overViewOpen = new BMap.OverviewMapControl({isOpen:true, anchor: BMAP_ANCHOR_BOTTOM_RIGHT});
+
+//    map.addControl(mapType1);          //2D图，卫星图
+//    map.addControl(mapType2);          //左上角，默认地图控件
+//    map.setCurrentCity("北京");        //由于有3D图，需要设置城市哦
+//    map.addControl(overView);          //添加默认缩略地图控件
+//    map.addControl(overViewOpen);
+//
+
+    var top_left_control = new BMap.ScaleControl({anchor: BMAP_ANCHOR_TOP_LEFT});// 左上角，添加比例尺
+    var top_left_navigation = new BMap.NavigationControl();  //左上角，添加默认缩放平移控件
+    var top_right_navigation = new BMap.NavigationControl({anchor: BMAP_ANCHOR_TOP_RIGHT, type: BMAP_NAVIGATION_CONTROL_SMALL});
+//    map.addControl(top_left_control);
+//    map.addControl(top_left_navigation);
+//    map.addControl(top_right_navigation);
+
+
+    var myDrawingManagerObject = new BMapLib.DrawingManager(map,
+		    {
+			    isOpen: true,
+			    drawingType: BMAP_DRAWING_RECTANGLE,
+			    enableDrawingTool: true,
+			    enableCalculate: false,
+			    drawingToolOptions: {
+				    anchor: BMAP_ANCHOR_TOP_LEFT,
+				    offset: new BMap.Size(5, 5),
+				    drawingTypes: [
+					    BMAP_DRAWING_MARKER,
+					    BMAP_DRAWING_CIRCLE,
+					    BMAP_DRAWING_POLYLINE,
+					    BMAP_DRAWING_POLYGON,
+					    BMAP_DRAWING_RECTANGLE
+				    ]
+			    },
+			    polylineOptions: {
+				    strokeColor: "#333"
+			    }
+		    });
+
+    myDrawingManagerObject.open();
+//    myDrawingManagerObject.setDrawingMode(BMAP_DRAWING_RECTANGLE);
+
+</script>
+
+
+</html>

@@ -1,0 +1,243 @@
+
+app_name: 'adapter_server'
+project_name: 'adapter_server'
+project_version: '0.1'
+
+logging:
+  level: DEBUG
+  format: '%(levelname)s %(asctime)s  %(message)s'
+  message_format: '%(project_name)s:%(project_version)s %(app_id)s %(_filename)s:%(_lineno)d [%(tags)s] '
+
+  filters:
+    trans:
+      tag: 'TRANS:'   # tag 过滤
+  handlers:
+    - type: file
+      enable: true
+      filename: 'server.log'
+      encoding: 'UTF-8'
+      max_bytes: 67108864 # 64MB
+      backup_count: 10
+
+    - type: file
+      enable: true
+      filename: 'trans.log'   #运单日志跟踪
+      encoding: 'UTF-8'
+      max_bytes: 67108864 # 64MB
+      backup_count: 10
+      filter: 'trans'
+
+    - type: logtail
+      enable: false
+      logstore: 'abc'
+      access_token: 'xxxx'
+      scret_key: 'xxxx'
+      uri: 'xxxx'
+
+    - type: console
+      enable: false
+
+http_trace: #自动日志记录
+  level: DEBUG
+  request:
+    options:
+      header:  false
+      body:  true
+      max_size: 500 # 最大数据包长度
+    urls:
+      - match: '/xxx'
+      - match: 'zoo/cat'
+        body:  true
+
+  response:
+    options:
+      header:  false
+      body:  true
+      max_size: 500 # 最大数据包长度
+    urls:
+      - match: '/'
+      - match: 'zoo/cat'
+        body:  true
+
+celery_trace: # celery 调用日志记录
+  level: 'DEBUG'
+  client_max_size: 500 # 0 :不记录数据参数
+  server_max_size: 500 # 日志记录 最大数据包长度
+
+
+celery_config:
+  services:
+    - name: 'test_server'
+      route:
+        type: 'redis'
+        broker: 'redis://127.0.0.1:6379/6'       #request queue
+        backend: 'redis://127.0.0.1:6379/7'
+      exchange:
+        name: 'tasks'
+        type: 'direct' # topic,fanout,headers,direct
+      queues:
+        - name: 'sub_dash'
+          routing_key: 'sub_dash'
+      tasks:
+        - name: 'hello'
+          path: 'access.celery.hello'
+          queue: 'sub_dash'
+          routing_key: 'sub_dash'
+      default_queue:  'default'
+
+  current: 'test_server' # 当前可用的celery服务
+
+http:
+  host : '127.0.0.1'
+  port : 15003
+  threaded: false
+  debug: true
+
+cache_config:
+  default:
+    type: redis
+    host: 'ytodev2'
+    port: 6379
+    password: '13916624477'
+    enable: true
+
+#mysql://username:password@hostname/database
+#sqlite:////absolute/path/to/database
+#postgresql://username:password@hostname/database
+
+flask_config:
+  active: default
+  default:
+    REDIS_URL : "redis://:@localhost:6379/1"
+    SQLALCHEMY_DATABASE_URI : 'sqlite:////tmp/test.db'
+#    SQLALCHEMY_BINDS:
+#      users:        'mysqldb://localhost/users'
+#      appmeta:      'sqlite:////path/to/appmeta.db'
+
+    SQLALCHEMY_TRACK_MODIFICATIONS : true
+    SQLALCHEMY_COMMIT_ON_TEARDOWN : true
+    SECRET_KEY : "abc"
+    TOKEN_EXPIRE : 3600*2
+    MAX_CONTENT_LENGTH : 5242880
+    UPLOAD_FOLDER : 'upload/'
+    FRONT_URL :  'tender_manage/'
+    DEBUG_TB_PROFILER_ENABLED : true
+    DEBUG : true
+
+  devel:
+
+blueprint_routes:
+  - package: 'access.api.v1'
+    url: '/rhino'
+    modules:
+      - name: 'vehicle'
+        url: '/vehicles'
+        routes:
+          - url: '/names'   # url name
+            name: 'get_vehicle_names'   # function name
+            methods: 'GET,POST'
+          - url: '/statistics'
+            name: 'get_vehicles_statistics'
+          - url: '/hotspots'
+            name: 'get_vehicle_hotspots'
+          - url: '/geometry'
+            name: 'get_vehicles_by_geometry'
+          - url: ''
+            name: 'get_vehicle_position'
+          - url: '/track'
+            name: 'get_vehicle_track'
+
+
+kafka_config:
+  - topic: 'test'
+    group: 'abcdef'  # simple_consumer if group is null
+#    hosts: '106.14.82.12:9092'
+#    zookeepers: 'wallizard.com:2181'
+    hosts: 'localhost:9092'
+    zookeepers: 'localhost:2181'
+    exec_thread_nr: 1 #执行线程数
+    entry:  'access.kafka.test.get_message' # last unit< get_message> is function object
+    enable: true
+    corutine: false # 是否启用协程
+    access: 'read,write' # 访问模式，用于发送 或接收
+
+amqp_config:
+  - name: 'mq_mess'
+    type: 'qpid'
+    host: 'ytodev2'
+    port: 5672
+    address: "mq_3; {create: always, node: {type: topic,durable:false}}"
+
+#    address="mq_gwa_broadcast;{create:always,node:{type:topic,durable:true}}"
+    exec_thread_nr: 1 #执行线程数
+    entry:  'access.amqp.channel.data_entry' # last unit< get_message> is function object
+    enable: true
+
+zookeeper_config:
+  hosts: 'localhost:2181'
+  root: '/camel/carrier'
+
+inspection:
+  health_interval: 20
+
+adapters:
+
+data_tracer:
+  user_life_time: 1800  # 30分钟之内保持 AccessUser数据在内存
+  cache_file: 'location.db'
+  china_region: '70,10,70,50'
+#  coordinate_encode: 'camel.rhinoceros.coord_transform.wgs84_to_bd09'
+  map_grids:
+  # baidu 地图缩放 19-1级 （由近至远）
+  # rhino 地图 1-19 （由近至远) , 转换 : abs( zoom(bd) - 19) + 1
+
+  # [1:20米，50米，100米，200米，500米，1公里，2公里，5公里，10公里，20公里，25公里，50公里，100公里，200公里，500公里，1000公里，2000公里，5000公里，10000公里]
+  #   1     2     3     4       5     6     7     8       9     10      11      12      13      14      15      16        17      18        19
+  # 25Km 以下(包括25km) 显示车辆
+
+#    - name: '0.1x0.1'   # 11x11 km
+#      cell_size: '0.1x0.1'
+#      scale_level: '1,4'
+
+    - name: '0.5x0.5'   # 11x11 km
+      cell_size: '0.5x0.5'
+      scale_level: '1,10'
+
+    - name: '1x1'       # 110x110 km
+      cell_size: '1x1'
+      scale_level: '11,14'
+
+    - name: '4x4'    # 440 x 440 km
+      cell_size: '4x4'
+      scale_level: '15,19'
+
+  visible_scales: # 车辆在不同地图缩放级别显示不同状态车辆
+    running: '1-11'
+    stopped: '1-11'
+    offline: '1-11'
+
+  query_track:
+    max_duration: 24  # 24 hour
+
+  database:
+    host: 'ytodev2'
+    port: 5432
+    user: 'postgres'
+    password: '13916624477'
+    dbname: 'rhino'
+    pool:
+      min: 5
+      max: 50
+
+
+
+
+
+
+# qpid-receive -b localhost:5672 -a "mq_test;{create:always,node:{type:queue,durable:true}}"
+
+
+
+
+
+

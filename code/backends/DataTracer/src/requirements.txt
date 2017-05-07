@@ -1,0 +1,6 @@
+pyDes
+jpype1
+gevent
+psycopg2
+psycogreen
+gevent-psycopg2
