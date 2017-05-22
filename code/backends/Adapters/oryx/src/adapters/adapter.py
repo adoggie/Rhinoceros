@@ -223,8 +223,6 @@ class AdapterBase(object):
     def _onDataReady(self,vehicle_id,data):
         """数据接收完成之后进行下一步消息的投递
         """
-
-
         data = self._time_twiste(data)
         if not data:
             return
@@ -233,14 +231,16 @@ class AdapterBase(object):
         data = self.buffer.enqueue(vehicle_id,data)
         if data: # fresh data
             env = data.toEnvelope()  # 发送 DataEnvelope
-            name = self.cfgs.get('post_mq')
+            names = self.cfgs.get('post_mq').split(',')
+
             serial = env.marshall()
             print serial
             tick =   timestamp_to_str(env.payloads.get(DataCategory.LOC.value).time, fmt='%Y%m%d_%H%M%S')
 
-
             print env.getId(),tick
             self.count+=1
             print 'data sent:',self.count
-            mq = AmqpManager.instance().getMessageQueue(name)
-            mq.produce( serial )
+            for name in names:
+                mq = AmqpManager.instance().getMessageQueue(name)
+                if mq:
+                    mq.produce( serial )

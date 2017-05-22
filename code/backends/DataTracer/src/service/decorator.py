@@ -31,7 +31,7 @@ def user_access_check(func):
             return func(*args, **kwargs)
         except:
             traceback.print_exc()
-            return ErrorReturn(ErrorDefs.SystemError, errmsg=traceback.format_exc()).json
+            return ErrorReturn(ErrorDefs.SystemError, errmsg=traceback.format_exc()).response
     return _wrapper
 
 

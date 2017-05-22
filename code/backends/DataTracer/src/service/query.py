@@ -62,6 +62,8 @@ class UserQuery(object):
                     offline+=1
             if running or stopped or offline:
                 x,y = cell.center()
+                mo = cell.mos.values()[0]
+                x,y = mo.getLocation().lon,mo.getLocation().lat
                 spots.append({
                     'id': cell.index(),
                     'lon':x,
@@ -272,29 +274,32 @@ class UserQuery(object):
             sql = "select data from {table} where id=%s and (time BETWEEN %s and %s) order by time".format(table=table)
 
             conn = TraceService.instance().getDatabaseConnection()
-            cur = conn.cursor()
-            cur.execute(sql,(id,start,end))
+            try:
+                cur = conn.cursor()
+                cur.execute(sql,(id,start,end))
 
-            last_time =0
-            row = cur.fetchone()
-            while row:
-                # for data in json.loads(row[0]):
-                # data = row[0]
-                # if granule>5:
-                #     granule = 5
-                # num = len(row[0])//granule
-
-                for _ in row[0]:
-
-                    step = VehicleObject(MovableObject.unmarshall(_)).dict()
-                    if step['time'] - granule*60 > last_time:
-                        last_time = step['time']
-                        result.append(step)
-
-                # for _ in row[0]:
-                #     step = VehicleObject(MovableObject.unmarshall(_)).dict()
-                #     result.append(step)
+                last_time =0
                 row = cur.fetchone()
+                while row:
+                    # for data in json.loads(row[0]):
+                    # data = row[0]
+                    # if granule>5:
+                    #     granule = 5
+                    # num = len(row[0])//granule
+
+                    for _ in row[0]:
+
+                        step = VehicleObject(MovableObject.unmarshall(_)).dict()
+                        if step['time'] - granule*60 > last_time:
+                            last_time = step['time']
+                            result.append(step)
+
+                    # for _ in row[0]:
+                    #     step = VehicleObject(MovableObject.unmarshall(_)).dict()
+                    #     result.append(step)
+                    row = cur.fetchone()
+            finally:
+                TraceService.instance().freeDatabaseConnection(conn)
 
         return result
 

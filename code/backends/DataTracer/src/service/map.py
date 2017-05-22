@@ -175,7 +175,8 @@ class GlobalMap:
                 if cell:
                     cells.append(cell)
                 else:
-                    print 'cell is null:',cellid
+                    # print 'cell is null:',cellid
+                    pass
                 x1+=1
             y1+=1
         #

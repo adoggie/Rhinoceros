@@ -6,7 +6,7 @@
 import gevent_psycopg2
 gevent_psycopg2.monkey_patch()
 from psycopg2 import pool as psycopg2_pool
-
+import psycopg2
 from camel.fundamental.utils.importutils import import_function
 from camel.fundamental.utils.useful import Singleton
 from camel.rhinoceros.base import DataEnvelope,DataCategory
@@ -48,10 +48,10 @@ class TraceService(Singleton):
         user = dbcfgs.get('user')
         password = dbcfgs.get('password')
         dbname = dbcfgs.get('dbname')
-
-        self.db_pool = psycopg2_pool.SimpleConnectionPool(min, max,
-                host=host, port = port,user=user, password=password,
-            dbname=dbname)
+        if max >0:
+            self.db_pool = psycopg2_pool.SimpleConnectionPool(min, max,
+                    host=host, port = port,user=user, password=password,
+                dbname=dbname)
 
     def getBuffer(self):
         return MovableObjectBuffer.instance()
@@ -130,5 +130,26 @@ class TraceService(Singleton):
 
 
     def getDatabaseConnection(self):
-        conn = self.db_pool.getconn()
+        if self.db_pool:
+            return self.db_pool.getconn()
+
+        dbcfgs = self.cfgs.get('database', {})
+        host = dbcfgs.get('host')
+        port = dbcfgs.get('port')
+        user = dbcfgs.get('user')
+        password = dbcfgs.get('password')
+        dbname = dbcfgs.get('dbname')
+        conn = psycopg2.connect(host = host, port = port, user = user, password = password,dbname = dbname)
         return conn
+
+    def freeDatabaseConnection(self,conn):
+        if not conn:
+            return self
+
+        if self.db_pool:
+            self.db_pool.putconn(conn)
+            return self
+
+        conn = None
+
+        #http://initd.org/psycopg/docs/pool.html

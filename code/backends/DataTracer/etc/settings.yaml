@@ -205,11 +205,23 @@ data_tracer:
 
     - name: '1x1'       # 110x110 km
       cell_size: '1x1'
-      scale_level: '11,14'
+      scale_level: '11,11'
+
+    - name: '2x2'       # 110x110 km
+      cell_size: '2x2'
+      scale_level: '12,13'
 
     - name: '4x4'    # 440 x 440 km
       cell_size: '4x4'
+      scale_level: '14,14'
+
+    - name: '8x8'    # 880 x 880 km
+      cell_size: '8x8'
       scale_level: '15,19'
+
+    - name: '16x16'    # 1760 x 1760 km
+      cell_size: '16x16'
+      scale_level: '16,19'
 
   visible_scales: # 车辆在不同地图缩放级别显示不同状态车辆
     running: '1-11'
@@ -227,7 +239,7 @@ data_tracer:
     dbname: 'rhino'
     pool:
       min: 5
-      max: 50
+      max: 5
 
 
 

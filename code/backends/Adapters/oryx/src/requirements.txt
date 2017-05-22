@@ -1,2 +1,6 @@
 pyDes
 jpype1
+
+# geos https://trac.osgeo.org/geos/
+# yum install geos geos-python
+# ogr http://www.gdal.org/ogr_apitut.html

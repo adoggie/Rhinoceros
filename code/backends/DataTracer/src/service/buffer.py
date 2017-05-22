@@ -5,7 +5,7 @@ import sqlite3
 import os.path
 import os
 
-from camel.fundamental.utils.pinyin import spm
+from camel.fundamental.utils.pinyin import spm,pinyin as PINYIN
 from camel.fundamental.application.app import instance
 from camel.fundamental.utils.useful import Singleton
 from camel.rhinoceros.base import MovableObject,DataEnvelope,YES,NO
@@ -66,7 +66,7 @@ class MovableObjectBuffer(Singleton):
         diff = None
         if not self.mos.has_key(new.getId()):
             self.mos[new.getId()] = new
-            pinyin = spm(new.getId())
+            pinyin = PINYIN(new.getId())
             self.memconn.execute("insert into movable_object values(?,0,0,'',?)", (new.getId(),pinyin))
             self.memconn.commit()
             diff = new
@@ -90,7 +90,7 @@ class MovableObjectBuffer(Singleton):
         :param limit:
         :return:
         """
-        id = spm(moid)
+        id = PINYIN(moid)
         cur = self.memconn.cursor()
         if id:
             cur.execute("select id from movable_object where spm like ? order by spm ",(id+'%',))
@@ -100,6 +100,8 @@ class MovableObjectBuffer(Singleton):
 
         for row in cur:
             id = row[0]
+            if id.find(moid) == -1:
+                continue
             if func:
                 func(id,result)
             else:

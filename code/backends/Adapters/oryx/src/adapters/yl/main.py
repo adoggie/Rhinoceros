@@ -38,7 +38,8 @@ class AdapterYL(AdapterBase):
             'timestamp':self.format_ymdhms(),
             'appkey': self.cfgs.get('account'),
             'format':'json',
-            'vehicle':carnums.encode('utf-8'),
+            # 'vehicle':carnums.encode('utf-8'),
+            'vehicle':-1,
             'isoffsetlonlat':2, #百度
             'sessionid':''
         }
@@ -108,6 +109,10 @@ class AdapterYL(AdapterBase):
             loc.provider = ProviderType.YL.value
             loc.lon = data.get('Lon',0)
             loc.lat = data.get('Lat',0)
+
+            loc.lat = data.get('Lat02', 0)  # 根据参数isoffsetlonlat返回的纬度
+            loc.lon = data.get('Lon02', 0)  # 根据参数isoffsetlonlat返回的纬度
+
             loc.speed = data.get('Speed',0)
             loc.time = str_to_timestamp( data.get('GPSTime',0) ) # todo. format timestamp
             loc.direction = data.get('Direction',0)

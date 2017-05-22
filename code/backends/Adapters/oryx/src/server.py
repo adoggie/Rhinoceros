@@ -15,7 +15,7 @@ class AdapterServer(CoroutineApplication):
         CoroutineApplication.init(self)
         AmqpManager.instance().init(self.getConfig().get('amqp_config'))
 
-        AmqpManager.instance().getMessageQueue('mq_mess').open(AccessMode.WRITE)
+        # AmqpManager.instance().getMessageQueue('mq_mess').open(AccessMode.WRITE)
 
         AdapterManager.instance().init(self.getConfig().get('adapters'))
 
