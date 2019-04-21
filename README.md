@@ -1,6 +1,6 @@
 # 位置监控服务系统(Rhinoceros)
 
-[http://www.wallizard.com:5555/teresa/index](http://www.wallizard.com:5555/teresa/index)
+[http://cargo.yanguish.com:20002/teresa/index](http://cargo.yanguish.com:20002/teresa/index)
 
 ## 1. 简介
 系统提供位置服务对象的数据接入、存储、在线位置、历史轨迹回放等功能，在系统实现时充分考虑软件独立性、模块性实现可控制、可扩展的要求。
